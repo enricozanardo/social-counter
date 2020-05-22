@@ -8,14 +8,24 @@
   font-size: calc(10px + 2vmin);
   color: white;
   text-align: center;
+  height: 100%;
 }
 
 .Main {
   margin-top: 1%;
 }
 
+.SocialCounter {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: yellow;
+  margin-bottom: 10%;
+}
+
 .App-logo {
-  height: 20vmin;
+  margin-top: 5%;
+  height: 15vmin;
   pointer-events: none;
   margin-bottom: 2%;
 }

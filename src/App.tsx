@@ -10,7 +10,9 @@ function App() {
     <div className="App">
       <img src={logo} className="App-logo" alt="logo" />
       <div className="Main">
-        <p>Example Application</p>
+        <p>Social Counter Application</p>
+      </div>
+      <div className="SocialCounter">
         <SocialCounter />
       </div>
     </div>
