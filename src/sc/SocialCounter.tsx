@@ -1,11 +1,18 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
 import '@tensorflow/tfjs';
 
 import './SocialCounter.css';
 
+type Data = {
+  [timestamp: string]: number;
+};
+
 export const SocialCounter: React.FC = () => {
+  let people_counter = 0;
+  const data: Data = {};
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // When the component will mount
@@ -22,6 +29,13 @@ export const SocialCounter: React.FC = () => {
     });
   }, []);
 
+  function storeCounterData(counter: number) {
+    const timestamp = new Date().valueOf();
+    data[timestamp] = counter;
+
+    console.log(data);
+  }
+
   async function getCameraObjects(): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       const mediaStream = await startVideo();
@@ -30,7 +44,10 @@ export const SocialCounter: React.FC = () => {
       }
 
       const modelPromise = await cocoSsd.load();
-      await checkFrame(modelPromise);
+      // await checkFrame(modelPromise);
+
+      // check again after 5 seconds
+      setInterval(async () => await checkFrame(modelPromise), 5000);
 
       try {
         resolve(true);
@@ -56,15 +73,25 @@ export const SocialCounter: React.FC = () => {
     modelPromise: cocoSsd.ObjectDetection
   ): Promise<cocoSsd.DetectedObject[]> {
     if (videoRef.current) {
-      const modelPromise = await cocoSsd.load();
+      // Reset counter
+      people_counter = 0;
 
       //TODO: from predicion extract the information that are needed to do stats
       const predictions = await modelPromise.detect(videoRef.current);
-      // console.log(predictions);
-      renderPredictions(predictions);
-      requestAnimationFrame(() => {
-        checkFrame(modelPromise);
+
+      predictions.map((predicion) => {
+        if (predicion.class === 'person') {
+          people_counter = people_counter + 1;
+        }
       });
+
+      storeCounterData(people_counter);
+
+      renderPredictions(predictions);
+      // requestAnimationFrame(() => {
+      //   checkFrame(modelPromise);
+      // });
+
       return predictions;
     }
     return Promise.reject(console.log(`Is not possible to detect the frame.`));
