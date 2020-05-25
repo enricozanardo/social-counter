@@ -9,8 +9,14 @@ type Data = {
   [timestamp: string]: number;
 };
 
+type mm = number;
+type pixels = number;
+
 export const SocialCounter: React.FC = () => {
-  let people_counter = 0;
+  let peopleCounter = 0;
+  let leftCounter = 0;
+  let rightCounter = 0;
+
   const data: Data = {};
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -29,11 +35,24 @@ export const SocialCounter: React.FC = () => {
     });
   }, []);
 
+  //TODO: Store in some DB that info
   function storeCounterData(counter: number) {
     const timestamp = new Date().valueOf();
     data[timestamp] = counter;
+    // console.log(data);
+  }
 
-    console.log(data);
+  function calculateDistance() {
+    let focalLength: mm = 4.25; // pi NoIr Camera
+    let objRealHeight: mm = 2120; // mean person height
+    let imageHeight: pixels = 4032;
+    let objectHeight: pixels = 3312;
+    let sensorHeight: mm = 5.79; // pi Noir Camera 7.01 x 5.79
+    let distance =
+      (focalLength * objRealHeight * imageHeight) /
+      (objectHeight * sensorHeight);
+
+    console.log(distance);
   }
 
   async function getCameraObjects(): Promise<boolean> {
@@ -74,18 +93,28 @@ export const SocialCounter: React.FC = () => {
   ): Promise<cocoSsd.DetectedObject[]> {
     if (videoRef.current) {
       // Reset counter
-      people_counter = 0;
+      peopleCounter = 0;
 
       //TODO: from predicion extract the information that are needed to do stats
       const predictions = await modelPromise.detect(videoRef.current);
 
       predictions.map((predicion) => {
         if (predicion.class === 'person') {
-          people_counter = people_counter + 1;
+          console.log(predicion);
+          if (predicion.bbox[0] > 200) {
+            // On the right
+            // rightCounter = rightCounter + 1;
+            console.log('on the right');
+          } else {
+            // leftCounter = leftCounter + 1;
+            console.log('on the left');
+          }
+
+          peopleCounter = peopleCounter + 1;
         }
       });
 
-      storeCounterData(people_counter);
+      // storeCounterData(peopleCounter);
 
       renderPredictions(predictions);
       // requestAnimationFrame(() => {
@@ -104,6 +133,17 @@ export const SocialCounter: React.FC = () => {
 
       if (ctx) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        // Line In-Out
+        ctx.beginPath();
+        ctx.moveTo(240, 0);
+        ctx.lineTo(239, 0);
+        ctx.lineTo(239, 360);
+        ctx.lineTo(241, 360);
+        ctx.lineTo(241, 0);
+        ctx.fillStyle = 'yellow';
+        ctx.fill();
+
         // Font options.
         const font = 'bold 14px Arial';
         ctx.font = font;
@@ -113,8 +153,8 @@ export const SocialCounter: React.FC = () => {
         predictions.forEach((prediction: any) => {
           const x = prediction.bbox[0];
           const y = prediction.bbox[1];
-          const width = prediction.bbox[2];
-          const height = prediction.bbox[3];
+          const width = prediction.bbox[2]; // ctx.canvas.width;
+          const height = prediction.bbox[3]; // ctx.canvas.height;
           // Draw the bounding box.
           ctx.strokeStyle = '#575756';
           ctx.lineWidth = 2;
@@ -148,10 +188,10 @@ export const SocialCounter: React.FC = () => {
         playsInline
         muted
         ref={videoRef}
-        width="400"
-        height="300"
+        width="480"
+        height="360"
       />
-      <canvas className="Canvas" ref={canvasRef} width="400" height="300" />
+      <canvas className="Canvas" ref={canvasRef} width="480" height="360" />
     </div>
   );
 };
