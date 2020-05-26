@@ -5,14 +5,31 @@ import '@tensorflow/tfjs';
 
 import './SocialCounter.css';
 
+const MAX_VALUE = 5000;
+const DELAY = 1000; //ms
+
 type Data = {
-  [timestamp: string]: number;
+  [timestamp: string]: Person[];
 };
 
 type mm = number;
 type pixels = number;
 
+type Centroid = {
+  x: pixels;
+  y: pixels;
+};
+
+type Person = {
+  id: string;
+  point: Centroid;
+  predictionPoint: Centroid;
+  prediction: cocoSsd.DetectedObject;
+};
+
 export const SocialCounter: React.FC = () => {
+  let detectedPeople: Person[] = [];
+
   let peopleCounter = 0;
   let leftCounter = 0;
   let rightCounter = 0;
@@ -36,23 +53,56 @@ export const SocialCounter: React.FC = () => {
   }, []);
 
   //TODO: Store in some DB that info
-  function storeCounterData(counter: number) {
+  function storeObjects(person: Person) {
     const timestamp = new Date().valueOf();
-    data[timestamp] = counter;
+    data[timestamp].push(person);
     // console.log(data);
   }
 
-  function calculateDistance() {
-    let focalLength: mm = 4.25; // pi NoIr Camera
-    let objRealHeight: mm = 2120; // mean person height
-    let imageHeight: pixels = 4032;
-    let objectHeight: pixels = 3312;
-    let sensorHeight: mm = 5.79; // pi Noir Camera 7.01 x 5.79
-    let distance =
-      (focalLength * objRealHeight * imageHeight) /
-      (objectHeight * sensorHeight);
+  function calculatePredictionPoint(
+    person: Person,
+    centroid: Centroid
+  ): Centroid {
+    let predictionPoint: Centroid = {
+      x: 0,
+      y: 0,
+    };
 
-    console.log(distance);
+    let deltaX = Math.abs(person.point.x - centroid.x) * 2;
+    let deltaY = Math.abs(person.point.y - centroid.y) * 2;
+
+    // Define direction
+    let horizontalDirection =
+      person.point.x <= centroid.x ? 'left2right' : 'right2left';
+    let verticalDirection =
+      person.point.y <= centroid.y ? 'Up2Down' : 'Down2Up';
+
+    if (horizontalDirection === 'left2right') {
+      predictionPoint.x = person.point.x + deltaX;
+    } else {
+      predictionPoint.x = person.point.x - deltaX;
+    }
+
+    if (verticalDirection === 'Down2Up') {
+      predictionPoint.y = person.point.y + deltaY;
+    } else {
+      predictionPoint.y = person.point.y - deltaY;
+    }
+
+    return predictionPoint;
+  }
+
+  function calculateEuclideanDistance(
+    personCentroid: Centroid,
+    centroid: Centroid
+  ): pixels {
+    let distance = Math.pow(
+      Math.pow(personCentroid.x - centroid.x, 2) +
+        Math.pow(personCentroid.y - centroid.y, 2),
+      0.5
+    );
+
+    return distance;
   }
 
   async function getCameraObjects(): Promise<boolean> {
@@ -88,29 +138,98 @@ export const SocialCounter: React.FC = () => {
     return Promise.reject(`It was not possible to load the video`);
   }
 
+  function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async function checkFrame(
     modelPromise: cocoSsd.ObjectDetection
   ): Promise<cocoSsd.DetectedObject[]> {
     if (videoRef.current) {
-      // Reset counter
+      // Reset Counters
       peopleCounter = 0;
+      detectedPeople = [];
 
-      //TODO: from predicion extract the information that are needed to do stats
-      const predictions = await modelPromise.detect(videoRef.current);
+      // Objects Detector
+      let predictions = await modelPromise.detect(videoRef.current);
 
-      predictions.map((predicion) => {
-        if (predicion.class === 'person') {
-          console.log(predicion);
-          if (predicion.bbox[0] > 200) {
-            // On the right
-            // rightCounter = rightCounter + 1;
-            console.log('on the right');
-          } else {
-            // leftCounter = leftCounter + 1;
-            console.log('on the left');
+      // Populate detectedPeople
+      predictions.map((prediction: cocoSsd.DetectedObject) => {
+        if (prediction.class === 'person') {
+          //Calculate centroid
+          let centroid = calculateCentroid(prediction);
+
+          const person: Person = {
+            id: `Id ${peopleCounter + 1}`.toString(),
+            point: centroid,
+            predictionPoint: { x: 0, y: 0 },
+            prediction: prediction,
+          };
+
+          detectedPeople.push(person);
+          console.log(detectedPeople.length);
+        }
+      });
+
+      // Predict Position
+      // Wait 1 sec.
+      await delay(DELAY);
+      console.log(`After ${DELAY * 0.001} seconds`);
+      predictions = await modelPromise.detect(videoRef.current);
+
+      predictions.map((prediction: cocoSsd.DetectedObject) => {
+        if (prediction.class === 'person') {
+          //Calculate centroid
+          let centroid = calculateCentroid(prediction);
+
+          // Detect the nearest Point
+          if (detectedPeople.length > 0) {
+            let minDistance = MAX_VALUE;
+            detectedPeople.map((person: Person) => {
+              let distance = calculateEuclideanDistance(person.point, centroid);
+              if (distance < minDistance) {
+                minDistance = distance;
+                // Associate this centroid as Prediction Point to the Person
+                person.predictionPoint = calculatePredictionPoint(
+                  person,
+                  centroid
+                );
+                console.log(person.predictionPoint);
+              }
+            });
           }
+        }
+      });
 
-          peopleCounter = peopleCounter + 1;
+      // Verify
+      // Wait 1 sec.
+      await delay(DELAY);
+      console.log(`After ${DELAY * 0.001} seconds`);
+      predictions = await modelPromise.detect(videoRef.current);
+
+      predictions.map((prediction: cocoSsd.DetectedObject) => {
+        if (prediction.class === 'person') {
+          //Calculate centroid
+          let centroid = calculateCentroid(prediction);
+
+          // Detect the nearest Point
+          if (detectedPeople.length > 0) {
+            let minDistance = MAX_VALUE;
+            detectedPeople.map((person: Person) => {
+              let distance = calculateEuclideanDistance(
+                person.predictionPoint,
+                centroid
+              );
+              if (distance < minDistance) {
+                minDistance = distance;
+                // Associate this person to this path
+                person.prediction = prediction;
+                person.point = calculateCentroid(prediction);
+                console.log(person.id);
+                console.log(`${person.point.x} - ${person.point.y}`);
+              }
+            });
+          }
         }
       });
 
@@ -124,6 +243,20 @@ export const SocialCounter: React.FC = () => {
       return predictions;
     }
     return Promise.reject(console.log(`Is not possible to detect the frame.`));
+  }
+
+  function calculateCentroid(prediction: cocoSsd.DetectedObject): Centroid {
+    const x = prediction.bbox[0];
+    const y = prediction.bbox[1];
+    const width = prediction.bbox[2];
+    const height = prediction.bbox[3];
+
+    let centroid: Centroid = {
+      x: x + width / 2,
+      y: y + height / 2,
+    };
+
+    return centroid;
   }
 
   const renderPredictions = (predictions: cocoSsd.DetectedObject[]) => {
@@ -150,18 +283,19 @@ export const SocialCounter: React.FC = () => {
         ctx.textBaseline = 'top';
         const textHeight = parseInt(font, 10);
 
-        predictions.forEach((prediction: any) => {
+        predictions.forEach((prediction: cocoSsd.DetectedObject) => {
           const x = prediction.bbox[0];
           const y = prediction.bbox[1];
           const width = prediction.bbox[2]; // ctx.canvas.width;
           const height = prediction.bbox[3]; // ctx.canvas.height;
+
           // Draw the bounding box.
           ctx.strokeStyle = '#575756';
           ctx.lineWidth = 2;
           ctx.strokeRect(x, y, width, height);
           // Draw the label background.
 
-          ctx.fillStyle = 'blue';
+          ctx.fillStyle = '#009ee3';
           const textWidth = ctx.measureText(prediction.class).width;
           ctx.fillRect(x, y, textWidth + 4, textHeight + 4);
         });
