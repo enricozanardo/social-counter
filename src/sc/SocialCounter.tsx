@@ -235,7 +235,7 @@ export const SocialCounter: React.FC = () => {
 
       // storeCounterData(peopleCounter);
 
-      renderPredictions(predictions);
+      renderPredictions(detectedPeople);
       // requestAnimationFrame(() => {
       //   checkFrame(modelPromise);
       // });
@@ -259,7 +259,7 @@ export const SocialCounter: React.FC = () => {
     return centroid;
   }
 
-  const renderPredictions = (predictions: cocoSsd.DetectedObject[]) => {
+  const renderPredictions = (detectedPeople: Person[]) => {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
@@ -283,11 +283,11 @@ export const SocialCounter: React.FC = () => {
         ctx.textBaseline = 'top';
         const textHeight = parseInt(font, 10);
 
-        predictions.forEach((prediction: cocoSsd.DetectedObject) => {
-          const x = prediction.bbox[0];
-          const y = prediction.bbox[1];
-          const width = prediction.bbox[2]; // ctx.canvas.width;
-          const height = prediction.bbox[3]; // ctx.canvas.height;
+        detectedPeople.forEach((person: Person) => {
+          const x = person.prediction.bbox[0];
+          const y = person.prediction.bbox[1];
+          const width = person.prediction.bbox[2]; // ctx.canvas.width;
+          const height = person.prediction.bbox[3]; // ctx.canvas.height;
 
           // Draw the bounding box.
           ctx.strokeStyle = '#575756';
@@ -296,18 +296,18 @@ export const SocialCounter: React.FC = () => {
           // Draw the label background.
 
           ctx.fillStyle = '#009ee3';
-          const textWidth = ctx.measureText(prediction.class).width;
+          const textWidth = ctx.measureText(person.id).width;
           ctx.fillRect(x, y, textWidth + 4, textHeight + 4);
         });
 
-        predictions.forEach((prediction) => {
-          const x = prediction.bbox[0] + 5;
-          const y = prediction.bbox[1] + 5;
+        detectedPeople.forEach((person: Person) => {
+          const x = person.prediction.bbox[0] + 5;
+          const y = person.prediction.bbox[1] + 5;
           const y_score = y + 15;
           // Draw the text last to ensure it's on top.
           ctx.fillStyle = '#009ee3';
-          const score = prediction.score.toPrecision(3).toString();
-          ctx.fillText(prediction.class, x, y);
+          const score = person.prediction.score.toPrecision(3).toString();
+          ctx.fillText(person.id, x, y);
           ctx.fillText(score, x, y_score);
         });
       }
