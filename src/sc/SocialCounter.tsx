@@ -67,7 +67,7 @@ export const SocialCounter: React.FC = () => {
 
   useEffect(() => {
     videoRef.current?.addEventListener('loadeddata', () => {
-      console.log("Loaded the video's data!");
+      console.log('Loaded Social Counter data!');
     });
   }, []);
 
@@ -235,11 +235,10 @@ export const SocialCounter: React.FC = () => {
 
                     // Update the counters
                     updateCounter(person.position);
-
-                    console.log(person.id);
-                    console.log(
-                      `New position for ${person.id} found - ${person.centroid.x} - ${person.centroid.y}`
-                    );
+                    // console.log(person.id);
+                    // console.log(
+                    //   `New position for ${person.id} found - ${person.centroid.x} - ${person.centroid.y}`
+                    // );
                   }
                 });
               }
@@ -283,7 +282,7 @@ export const SocialCounter: React.FC = () => {
                       person,
                       centroid
                     );
-                    console.log(`New Prediction for ${person.id} found`);
+                    // console.log(`New Prediction for ${person.id} found`);
                   }
                 });
               }
@@ -323,10 +322,13 @@ export const SocialCounter: React.FC = () => {
             if (prediction.class === 'person') {
               //Calculate centroid
               let centroid = calculateCentroid(prediction);
-              setPeopleCounter(peopleCounter + 1);
+              let tmp = peopleCounter;
+              tmp = tmp + 1;
+
+              setPeopleCounter(tmp);
 
               const person: Person = {
-                id: `Id${peopleCounter}`.toString(),
+                id: `Id${tmp}`.toString(),
                 centroid: centroid,
                 predictionPoint: { x: 0, y: 0 },
                 prediction: prediction,
@@ -411,9 +413,6 @@ export const SocialCounter: React.FC = () => {
           const y = person.prediction.bbox[1];
           const width = person.prediction.bbox[2]; // ctx.canvas.width;
           const height = person.prediction.bbox[3]; // ctx.canvas.height;
-
-          console.log(`LeftCounter: ${leftCounter}`);
-          console.log(`RightCounter: ${rightCounter}`);
 
           // Draw the bounding box.
           ctx.strokeStyle = '#575756';
