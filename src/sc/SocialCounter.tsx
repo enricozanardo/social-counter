@@ -6,8 +6,8 @@ import '@tensorflow/tfjs';
 import './SocialCounter.css';
 
 const MAX_VALUE = 5000;
-const DELAY = 100; //ms
-const CYCLE = 2000; //ms
+const DELAY = 80; //ms
+const CYCLE = 1000; //ms
 
 const WIDTH = 480;
 const HEIGHT = 360;
@@ -74,8 +74,7 @@ export const SocialCounter: React.FC = () => {
   useEffect(() => updateInfo(), [info]);
 
   function updateInfo() {
-    console.log(`##################################`);
-    // var counter = info[0] ? `<p>Yes ${info[0].left} </p>` : '<p>No</p>';
+    //TODO: Add to the DB the data
   }
 
   function calculatePredictionPoint(
@@ -434,7 +433,7 @@ export const SocialCounter: React.FC = () => {
   return (
     <div>
       <p>
-        Left: {leftCounter} - Right: {rightCounter}
+        In: {leftCounter} - Out: {rightCounter}
       </p>
       <div className="Main2">
         <video
