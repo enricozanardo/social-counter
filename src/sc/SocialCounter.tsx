@@ -9,8 +9,8 @@ const MAX_VALUE = 5000;
 const DELAY = 80; //ms
 const CYCLE = 1000; //ms
 
-const WIDTH = 480;
-const HEIGHT = 360;
+const WIDTH = 480; // pixel
+const HEIGHT = 360; // pixel
 const LINE = WIDTH / 2; // border from left/right in pixel
 
 enum Direction {
@@ -50,7 +50,8 @@ export const SocialCounter: React.FC = () => {
   //TODO: Init the DB...
   const [leftCounter, setLeftCounter] = useState(0);
   const [rightCounter, setRightCounter] = useState(0);
-  const [peopleCounter, setPeopleCounter] = useState(0);
+
+  let peopleCounter = 0;
 
   const [info, setInfo] = useState(initialInfo);
 
@@ -190,7 +191,7 @@ export const SocialCounter: React.FC = () => {
           right: rightCounter,
         };
 
-        await save(count);
+        // await save(count);
 
         // Render Predictions
         renderPredictions(detectedPeople);
@@ -314,7 +315,7 @@ export const SocialCounter: React.FC = () => {
       // Objects Detector
       try {
         if (videoRef.current) {
-          setPeopleCounter(0);
+          peopleCounter = 0;
           let predictions = await modelPromise.detect(videoRef.current);
 
           // Populate detectedPeople
@@ -322,13 +323,11 @@ export const SocialCounter: React.FC = () => {
             if (prediction.class === 'person') {
               //Calculate centroid
               let centroid = calculateCentroid(prediction);
-              let tmp = peopleCounter;
-              tmp = tmp + 1;
 
-              setPeopleCounter(tmp);
+              peopleCounter = peopleCounter + 1;
 
               const person: Person = {
-                id: `Id${tmp}`.toString(),
+                id: `Id${peopleCounter}`.toString(),
                 centroid: centroid,
                 predictionPoint: { x: 0, y: 0 },
                 prediction: prediction,
